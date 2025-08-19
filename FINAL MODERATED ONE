@@ -1,0 +1,57 @@
+import java.util.Arrays;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
+
+class StepwiseSort {
+    public static void stepwiseSort(int arr[]) {
+        int n = arr.length;
+        int step = 1;
+        while (step < n / 3) { step = 3 * step + 1; }
+
+        while (step > 0) {
+            for (int i = step; i < n; i++) {
+                int key = arr[i];
+                int j = i;
+                while (j >= step && arr[j - step] > key) {
+                    arr[j] = arr[j - step];
+                    j -= step;
+                }
+                arr[j] = key;
+            }
+            step /= 3;
+        }
+
+        if (n > 5000) { parallelMergeSort(arr); }
+    }
+
+    private static void parallelMergeSort(int[] arr) {
+        ForkJoinPool pool = new ForkJoinPool();
+        pool.invoke(new MergeSortTask(arr, 0, arr.length - 1));
+    }
+
+    static class MergeSortTask extends RecursiveAction {
+        private final int[] arr;
+        private final int left, right;
+
+        MergeSortTask(int[] arr, int left, int right) {
+            this.arr = arr;
+            this.left = left;
+            this.right = right;
+        }
+
+        @Override
+        protected void compute() {
+            if (left >= right) return;
+            int mid = left + (right - left) / 2;
+            invokeAll(new MergeSortTask(arr, left, mid), new MergeSortTask(arr, mid + 1, right));
+            merge(left, mid, right);
+        }
+
+        private void merge(int left, int mid, int right) {
+            int[] temp = Arrays.copyOfRange(arr, left, right + 1);
+            int i = left, j = mid + 1, k = 0;
+            while (i <= mid && j <= right) { arr[left + k++] = (temp[i - left] < temp[j - left]) ? temp[i++ - left] : temp[j++ - left]; }
+            while (i <= mid) arr[left + k++] = temp[i++ - left];
+            while (j <= right) arr[left + k++] = temp[j++ - left];
+        }
+    }}
