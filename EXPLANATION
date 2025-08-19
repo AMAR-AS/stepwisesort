@@ -1,0 +1,198 @@
+let’s break down the entire code step by step so you understand every line, concept, and flow of your hybrid sorting algorithm. We’ll go deep but keep it clear. Ready? Let’s go.
+
+🔍 Overview
+
+You're implementing a hybrid sorting algorithm called StepwiseSort that does:
+
+🧩 Shell Sort (with Knuth's gap) for small arrays (n ≤ 10,000)
+
+⚡ Parallel Merge Sort (using Java Fork/Join) for large arrays (n > 10,000)
+
+🧠 Recursive parallelism to take advantage of multi-core CPUs
+
+✅ Part 1: Entry Point — stepwiseSort(int[] arr)
+public static void stepwiseSort(int arr[]) {
+    int n = arr.length;
+
+    if (n <= PARALLEL_THRESHOLD) {
+        shellSort(arr);
+    } else {
+        parallelMergeSort(arr);
+    }
+}
+
+🧠 What It Does:
+
+Gets the array size n
+
+If size is ≤ 10,000, it uses shellSort() — efficient for small arrays
+
+If > 10,000, it uses parallelMergeSort() — faster for large arrays via parallelism
+
+This is the hybrid decision logic — the core of your adaptive algorithm.
+
+✅ Part 2: shellSort(int[] arr)
+private static void shellSort(int[] arr) {
+    int n = arr.length;
+    int step = 1;
+
+    while (step < n / 3) {
+        step = 3 * step + 1; // Knuth's sequence: 1, 4, 13, 40...
+    }
+
+🧠 What It Does:
+
+Shell Sort uses a gap-based insertion sort
+
+Starts with a gap (called step) between elements
+
+step = 3*step + 1 is Knuth’s sequence, known to perform well in practice
+
+    while (step > 0) {
+        for (int i = step; i < n; i++) {
+            int key = arr[i];
+            int j = i;
+
+🧠 Inner Loop:
+
+For each step, it loops from that position till end
+
+Think of it like insertion sort but comparing elements step apart
+
+            while (j >= step && arr[j - step] > key) {
+                arr[j] = arr[j - step]; // shift larger elements right
+                j -= step;
+            }
+            arr[j] = key; // insert in correct position
+        }
+        step /= 3; // decrease gap
+    }
+}
+
+🧠 Final Steps:
+
+Once insertion is done for this gap, reduce step and repeat
+
+When step becomes 1, it’s a normal insertion sort
+
+When step is 0, sorting is done
+
+✅ Shell Sort = efficient for small to medium arrays with better cache use than Merge or Quick Sort
+
+✅ Part 3: parallelMergeSort(int[] arr)
+private static void parallelMergeSort(int[] arr) {
+    ForkJoinPool pool = new ForkJoinPool();
+    pool.invoke(new MergeSortTask(arr, 0, arr.length - 1));
+}
+
+🧠 What It Does:
+
+Creates a ForkJoinPool (Java’s parallel thread pool)
+
+Submits a task: MergeSortTask, which recursively sorts the array
+
+Parallelism is handled internally by the pool
+
+✅ Part 4: MergeSortTask — The Recursive Parallel Sort
+static class MergeSortTask extends RecursiveAction {
+    private static final int SEQUENTIAL_THRESHOLD = 1000;
+    private final int[] arr;
+    private final int left, right;
+
+    MergeSortTask(int[] arr, int left, int right) {
+        this.arr = arr;
+        this.left = left;
+        this.right = right;
+    }
+
+🧠 Class Setup:
+
+This is a ForkJoin task — a unit of work that can run in parallel
+
+RecursiveAction means it returns nothing
+
+It stores:
+
+arr = array to sort
+
+left = start index
+
+right = end index
+
+    @Override
+    protected void compute() {
+        if (right - left <= SEQUENTIAL_THRESHOLD) {
+            Arrays.sort(arr, left, right + 1); // small subarray? sort sequentially
+            return;
+        }
+
+🧠 Recursive Sorting:
+
+If the subarray is small (≤ 1000), use regular Arrays.sort() (no parallelism)
+
+Why? Fork/Join overhead isn’t worth it on tiny data
+
+        int mid = left + (right - left) / 2;
+        invokeAll(
+            new MergeSortTask(arr, left, mid),
+            new MergeSortTask(arr, mid + 1, right)
+        );
+        merge(left, mid, right);
+    }
+
+🧠 Forking Work:
+
+Splits array into two halves
+
+Recursively calls invokeAll() to process both in parallel
+
+Then merges the two sorted halves
+
+✅ Part 5: merge() Function
+private void merge(int left, int mid, int right) {
+    int[] temp = Arrays.copyOfRange(arr, left, right + 1);
+    int i = 0, j = mid - left + 1, k = left;
+
+🧠 Setup:
+
+Copies the subarray into temp[]
+
+i points to left half, j to right half
+
+k is the index for placing back into arr
+
+    while (i <= mid - left && j <= right - left) {
+        arr[k++] = (temp[i] < temp[j]) ? temp[i++] : temp[j++];
+    }
+    while (i <= mid - left) arr[k++] = temp[i++];
+    while (j <= right - left) arr[k++] = temp[j++];
+}
+
+🧠 Final Merge:
+
+Standard merge logic:
+
+Pick smaller of two values
+
+Move pointers accordingly
+
+Finish remaining values from both halves
+
+✅ This is a standard merge step used in Merge Sort
+
+🧠 Final Summary
+Step	What Happens
+stepwiseSort()	Chooses algorithm based on input size
+shellSort()	Efficient in-place sort for small arrays
+parallelMergeSort()	Fast, multi-threaded sort for big arrays
+MergeSortTask	Recursively splits and sorts using Fork/Join
+merge()	Combines sorted halves efficiently
+✅ Why This Algorithm Is Smart
+
+Efficient on both small and large inputs
+
+Parallel where needed, simple where not
+
+Customizable thresholds
+
+Easy to explain and benchmark
