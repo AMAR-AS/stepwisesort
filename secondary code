@@ -1,0 +1,36 @@
+import java.util.Arrays;
+
+class StepwiseSort {
+    public static void stepwiseSort(int arr[]) {
+        int n = arr.length;
+        int step = n / 2;  // Start with a large step (like Shell Sort)
+
+        while (step > 0) {
+            for (int i = step; i < n; i++) {
+                int key = arr[i];
+                int j = i;
+                
+                // Shift elements using Binary Insertion logic
+                while (j >= step && arr[j - step] > key) {
+                    arr[j] = arr[j - step];
+                    j -= step;
+                }
+                arr[j] = key;
+            }
+            step /= 2;  // Reduce step size
+        }
+
+        // Hybrid Switch: If the array is still not sorted well, use Merge Sort for large datasets
+        if (n > 1000) {
+            Arrays.sort(arr);  // Using Java's optimized MergeSort for final pass
+        }
+    }
+
+    public static void main(String args[]) {
+        int arr[] = {2, 15, 5742, 54, 2, 4521, 12, 1, 1, 21, 8, 56};
+
+        stepwiseSort(arr);
+
+        System.out.println("Optimized Stepwise Sorted Array: " + Arrays.toString(arr));
+    }
+}
