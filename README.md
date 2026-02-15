@@ -12,7 +12,7 @@ To use the StepwiseSort algorithm, follow these steps:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/AMARNU/stepwisesort.git
+   git clone https://github.com/AMAR-AS/stepwisesort.git
    ```
 
 2. Include the algorithm in your Java project.
